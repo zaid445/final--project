@@ -1,143 +1,165 @@
-
-
-
-
-// Filter products based on category selection
-document.querySelectorAll('.filter-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        let filter = this.getAttribute('data-filter'); // Get selected filter
-        document.querySelectorAll('.product').forEach(product => {
-            if (filter === 'all' || product.getAttribute('data-category') === filter) {
-                product.style.display = 'block'; // Show product if it matches filter
-            } else {
-                product.style.display = 'none'; // Hide product if it doesn't match filter
-            }
-        });
-    });
-});
-
-
-
-
-
-
-
-// Array to store image sets for carousel
-const imageSets = [
-    // Set of images and titles for the first carousel
-    [
-        { src: "https://img.sonofatailor.com/images/customizer/product/Black_O_Crew_Regular_NoPocket.jpg", title: "T-Shirt" },
-        { src: "https://m.media-amazon.com/images/I/61GpT8+nFXL._AC_SL1008_.jpg", title: "Bags" },
-        { src: "https://cdn.khadims.com/image/tr:e-sharpen-01,h-822,w-940,cm-pad_resize/data/khadims/28jan2025/27405210660_1.jpg", title: "Sandal" },
-        { src: "https://images-cdn.ubuy.co.in/633b4d0ec453a05ef838979c-damyuan-running-shoes-men-fashion.jpg", title: "Shoes" },
-        { src: "https://img.santinicycling.com/us/148200-large_default/active-technical-pants.jpg", title: "pants" }
-    ],
-    // Set of images and titles for the second carousel
-    [
-        { src: "pngegg.png", title: "pant" },
-        { src: "pngegg (1).png", title: "T--Shirt" },
-        { src: "pngegg (2).png", title: "Shoes." },
-        { src: "pngegg (3).png", title: "Sandal." },
-        { src: "pngegg (4).png", title: "Bags." }
-    ]
-];
-
-// Index to track which image set is currently being displayed
-let currentIndex = 0;
-
-// Function to render images in the carousel
-function renderImages() {
-    const carousel = document.getElementById("carousel");
-    carousel.innerHTML = ""; // Clear existing images in the carousel
-    imageSets[currentIndex].forEach(item => {
-        const div = document.createElement("div");
-        div.classList.add("card");
+// Function to search for a dish using the MealDB API
+async function searchDish() {
+    const dishName = document.getElementById("dish-name").value;
+    if (!dishName) return alert("Please enter a dish name");
+    
+    const apiUrl = `https://www.themealdb.com/api/json/v1/1/search.php?s=${dishName}`;
+    
+    try {
+        const response = await fetch(apiUrl); // Fetch dish data from the API
+        const data = await response.json();
         
-        // Apply custom styles for different product types
-        let imageStyle = "";
-        if (item.title === "T-Shirt") {
-            imageStyle = "width: 120px; height: auto;";
-        } else if (item.title === "Bags") {
-            imageStyle = "width: 120px; height: auto;";
-        } else if (item.title === "Sandal") {
-            imageStyle = "width: 150px; height: auto;";
-        } else if (item.title === "Shoes") {
-            imageStyle = "width: 130px; height: auto;";
-        } else if (item.title === "pants") {
-            imageStyle = "width: 110px; height: auto;";
+        if (data.meals) {
+            displayDishDetails(data.meals[0]); // Display the first matching dish
+        } else {
+            document.getElementById("dish-details").innerHTML = "<p>Dish not found</p>";
         }
-        
-        div.innerHTML = `<img src="${item.src}" alt="${item.title}" style="${imageStyle}"><p>${item.title}</p>`;
-        carousel.appendChild(div);
-    });
-}
-// Function to navigate to next set of images
-function nextImages() {
-    currentIndex = (currentIndex + 1) % imageSets.length; // Move to next set
-    renderImages();
-}
-
-// Function to navigate to previous set of images
-function prevImages() {
-    currentIndex = (currentIndex - 1 + imageSets.length) % imageSets.length; // Move to previous set
-    renderImages();
-}
-
-// Initial render of images
-renderImages();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// AR functionality for Try-On button
-document.addEventListener("DOMContentLoaded", function () {
-    const tryOnButtons = document.querySelectorAll(".try-on-btn");
-
-    tryOnButtons.forEach((button) => {
-        button.addEventListener("click", function () {
-            const imgSrc = this.getAttribute("data-img");
-            openARView(imgSrc); // Open AR view with selected image
-        });
-    });
-
-    function openARView(imgSrc) {
-        // Create overlay for AR view
-        const overlay = document.createElement("div");
-        overlay.classList.add("ar-overlay");
-        overlay.innerHTML = `
-            <video id="cameraFeed" autoplay></video>
-            <img src="${imgSrc}" id="arItem">
-            <button class="close-ar">❌</button>
-        `;
-        document.body.appendChild(overlay); 
-
-        // Access the camera for AR display
-        const video = document.getElementById("cameraFeed");
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then((stream) => {
-                video.srcObject = stream;
-            })
-            .catch((err) => console.error("Failed to access camera:", err));
-
-        // Close AR view when the close button is clicked
-        document.querySelector(".close-ar").addEventListener("click", function () {
-            document.body.removeChild(overlay);
-            stream.getTracks().forEach(track => track.stop());
-        });
+    } catch (error) {
+        console.error("Error fetching dish details:", error);
     }
+}
+
+// Function to display dish details
+function displayDishDetails(meal) {
+    document.getElementById("dish-details").innerHTML = `
+        <img src="${meal.strMealThumb}" alt="${meal.strMeal}">
+        <h2>${meal.strMeal}</h2>
+        <p><strong>Category:</strong> ${meal.strCategory}</p>
+        <p><strong>Origin:</strong> ${meal.strArea}</p>
+        <p><strong>Ingredients:</strong></p>
+        <ul>
+            ${getIngredients(meal)} <!-- Generate and display ingredients -->
+        </ul>
+        <p><strong>Instructions:</strong> ${meal.strInstructions.substring(0, 200)}...</p>
+    `;
+}
+
+// Function to get and format ingredients list
+function getIngredients(meal) {
+    let ingredients = "";
+    for (let i = 1; i <= 20; i++) {
+        if (meal[`strIngredient${i}`]) {
+            ingredients += `<li>${meal[`strIngredient${i}`]} - ${meal[`strMeasure${i}`]}</li>`;
+        }
+    }
+    return ingredients;
+}
+
+// Get elements for menu and favorites
+const menuContainer = document.getElementById("menu-container");
+const favoritesList = document.getElementById("favorites-list");
+const favoritesModal = document.getElementById("favorites-modal");
+
+// Retrieve favorites from local storage or initialize an empty array
+let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+
+// Function to fetch and display menu items
+async function fetchMenu() {
+    const response = await fetch("https://www.themealdb.com/api/json/v1/1/filter.php?c=Beef"); // Fetch beef dishes
+    const data = await response.json();
+    displayMenu(data.meals);
+}
+
+// Function to display menu items
+function displayMenu(meals) {
+    menuContainer.innerHTML = "";
+    meals.forEach(meal => {
+        const dishHTML = `
+           <div class="row">
+                <img src="${meal.strMealThumb}" alt="${meal.strMeal}">
+                <h3>${meal.strMeal}</h3>
+                <p>Delicious grilled dish made with love.</p>
+                <div class="in-text">
+                    <div class="price">
+                        <h6>$${(Math.random() * (50 - 20) + 20).toFixed(2)}</h6> <!-- Random price -->
+                    </div>
+                    <button class="fav-btn ${favorites.includes(meal.idMeal) ? "active" : ""}" 
+                        data-id="${meal.idMeal}"
+                        onclick="toggleFavorite('${meal.idMeal}', '${meal.strMeal}', '${meal.strMealThumb}', this)">
+                        ${favorites.some(fav => fav.id === meal.idMeal) ? "Remove from Favorites" : "Add to Favorites"}
+                    </button>
+                </div>
+            </div>
+        `;
+        menuContainer.innerHTML += dishHTML; // Append each dish to the menu
+    });
+}
+
+// Function to update favorite buttons based on stored favorites
+function updateFavoriteButtons() {
+    document.querySelectorAll(".fav-btn").forEach(button => {
+        let id = button.getAttribute("data-id");
+        let isFavorite = favorites.some(fav => fav.id === id);
+
+        if (isFavorite) {
+            button.classList.add("active");
+            button.innerText = "Remove from Favorites";
+        } else {
+            button.classList.remove("active");
+            button.innerText = "Add to Favorites";
+        }
+    });
+}
+
+// Function to add or remove a dish from favorites
+function toggleFavorite(id, name, image, button) {
+    let index = favorites.findIndex(fav => fav.id === id);
+    
+    if (index === -1) {
+        favorites.push({ id, name, image }); // Add to favorites
+        button.classList.add("active");
+        button.innerText = "Remove from Favorites";
+    } else {
+        favorites.splice(index, 1); // Remove from favorites
+        button.classList.remove("active");
+        button.innerText = "Add to Favorites";
+    }
+
+    localStorage.setItem("favorites", JSON.stringify(favorites)); // Save favorites to local storage
+}
+
+// Ensure favorite buttons are updated when the page loads
+document.addEventListener("DOMContentLoaded", updateFavoriteButtons);
+
+// Function to show favorite dishes in a modal
+function showFavorites() {
+  favoritesList.innerHTML = "";
+  if (favorites.length === 0) {
+      favoritesList.innerHTML = "<p>No favorite dishes yet.</p>";
+  } else {
+      favorites.forEach(fav => {
+          favoritesList.innerHTML += `
+              <div class="row">
+                  <img src="${fav.image}" alt="${fav.name}">
+                  <h3>${fav.name}</h3>
+              </div>
+          `;
+      });
+  }
+  favoritesModal.style.display = "flex"; // Show modal
+}
+
+// Function to close the favorites modal
+function closeFavorites() {
+    favoritesModal.style.display = "none";
+}
+
+// Fetch the menu items when the page loads
+fetchMenu();
+
+// Booking form event listener for table reservation
+document.getElementById("booking-form").addEventListener("submit", function (event) {
+  event.preventDefault(); // Prevent form from refreshing the page
+
+  // Get form input values
+  const name = document.getElementById("name").value;
+  const guests = document.getElementById("guests").value;
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+
+  // Generate and display booking confirmation message
+  const confirmationMessage = `Thank you, ${name}! Your table for ${guests} guests on ${date} at ${time} has been reserved.`;
+  
+  document.getElementById("confirmation-message").textContent = confirmationMessage;
+  document.getElementById("booking-form").reset(); // Reset form fields after submission
 });
